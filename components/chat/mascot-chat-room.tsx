@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { AlertCircle, ChevronLeft, Code, Image as ImageIcon, MessageSquare, MoreHorizontal, RotateCcw, Sparkles, Trash2, UserRound } from "lucide-react";
+import { AlertCircle, ChevronLeft, Code, FileText, Image as ImageIcon, MessageSquare, MoreHorizontal, RotateCcw, Sparkles, Trash2, UserRound } from "lucide-react";
 import { PageShell } from "@/components/ui/page-shell";
 import { ConfirmDialog } from "@/components/ui/modal";
 import { MediaPreviewOverlay } from "@/components/chat/media-preview-overlay";
@@ -665,6 +665,20 @@ export function MascotChatRoom({ onBack, onDeleted }: MascotChatRoomProps) {
         }
     }, []);
 
+    const handlePickMarkdown = useCallback(async (file: File | null) => {
+        if (!file) return;
+        try {
+            const text = await file.text();
+            setInputText((prev) => (prev ? `${prev}\n\n${text}` : text));
+            requestAnimationFrame(() => {
+                resizeTextarea();
+                textareaRef.current?.focus();
+            });
+        } catch (error) {
+            console.warn("[MascotChatRoom] markdown read failed:", error);
+        }
+    }, []);
+
     const resizeTextarea = () => {
         const ta = textareaRef.current;
         if (!ta) return;
@@ -1154,6 +1168,26 @@ export function MascotChatRoom({ onBack, onDeleted }: MascotChatRoomProps) {
                        字留在框里；发送键在思考中仍是停止键。 */
                 />
                 <div className="chat-input-actions">
+                    <label
+                        className="ui-bare-btn text-[var(--c-text)]"
+                        aria-disabled={chat.isThinking}
+                        title="导入 Markdown 文件"
+                        onClick={(event) => {
+                            if (chat.isThinking) event.preventDefault();
+                        }}
+                    >
+                        <FileText size={24} strokeWidth={1.5} />
+                        <input
+                            type="file"
+                            accept=".md,.markdown,text/markdown,text/plain"
+                            className="hidden"
+                            onChange={(event) => {
+                                const file = event.currentTarget.files?.[0] || null;
+                                event.currentTarget.value = "";
+                                void handlePickMarkdown(file);
+                            }}
+                        />
+                    </label>
                     <label
                         className="ui-bare-btn text-[var(--c-text)]"
                         aria-disabled={chat.isThinking || pendingImages.length >= 4}
